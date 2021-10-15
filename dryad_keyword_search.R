@@ -22,9 +22,9 @@
 library(jsonlite)
 
 dryadkeywordsearch <- function(query, startpage=1, endpage=1, 
-                                cols = c("identifier", "title", "authors", "abstract", "locations", 
-                                         "relatedWorks", "versionNumber", "publicationDate", 
-                                         "lastModificationDate")){
+                               cols = c("identifier", "title", "authors", "abstract", "locations", 
+                                        "relatedWorks", "versionNumber", "publicationDate", 
+                                        "lastModificationDate")){
   if(startpage>endpage) stop('End page should be greater than start page')
   
   spacereplace <- gsub(" ", "%20", query)
@@ -39,13 +39,16 @@ dryadkeywordsearch <- function(query, startpage=1, endpage=1,
     nores <- data.frame(matrix(ncol = length(cols), nrow = 0))
     colnames(nores) <- cols 
     return(nores)
-    }
+  }
   resdfs <- resdf[,cols]
   result_list[[1]] <- resdfs
   
-  if(nrow(resdf) == 100){
+  if(nrow(resdf) == 100 & endpage >1){
     for(j in seq((startpage+1):endpage)){
       p <- c((startpage+1):endpage)[j]
+      
+      if(is.na(p)) break
+      
       searchURL <- paste0("https://datadryad.org/api/v2/search?page=", p, "&per_page=100&q=", spacereplace)
       resl <- fromJSON(searchURL)
       resdfl <- resl[['_embedded']][['stash:datasets']]
@@ -56,23 +59,27 @@ dryadkeywordsearch <- function(query, startpage=1, endpage=1,
       resdfsl <- resdfl[,cols]
       result_list[[j+1]] <- resdfsl
       
-      
       if(p == endpage){
         if(nrow(resdfl)==100){
           warning('There might be more results! Try increasing end page')
         }
       }
-      }
-        moreresults <- do.call("rbind", result_list)
+    }
+    moreresults <- do.call("rbind", result_list)
     return(moreresults)
   } else{
+    if(is.data.frame(result_list[[1]])){
+      if(nrow(result_list[[1]]) == 100) warning('There might be more results! Try increasing end page')  
+    } else if(is.character(result_list[[1]])){
+      if(length(result_list[[1]]) == 100) warning('There might be more results! Try increasing end page')  
+    }
     return(result_list[[1]])}
 }
 
 #### Examples ####
 # single term:
 res <- dryadkeywordsearch("moose")
-res <- dryadkeywordsearch("moose", startpage = 1, endpage = 10)
+res <- dryadkeywordsearch("mass", startpage = 3, endpage = 5)
 # wildcard:
 res <- dryadkeywordsearch("moos*")
 # multiple terms:
