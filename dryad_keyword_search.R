@@ -25,43 +25,52 @@ dryadkeywordsearch <- function(query, startpage=1, endpage=1,
                                cols = c("identifier", "title", "authors", "abstract", "locations", 
                                         "relatedWorks", "versionNumber", "publicationDate", 
                                         "lastModificationDate")){
+  
   if(startpage>endpage) stop('End page should be greater than start page')
   
-  spacereplace <- gsub(" ", "%20", query)
-  searchURL <- paste0("https://datadryad.org/api/v2/search?page=", startpage,"&per_page=100&q=", spacereplace)
+  more_results_warning <- 'There might be more results! Try increasing end page'
+  url_begin <- 'https://datadryad.org/api/v2/search?page=' # beginning of URL for dryad api
+  url_resultsperpage <- '&per_page=100&q=' # set number of results per page in URL; max 100
+  
+  spacereplace <- gsub(" ", "%20", query) # replace spaces in query
+  
+  # Create url for search terms:
+  searchURL <- paste0(url_begin, startpage,url_resultsperpage, spacereplace)
   
   result_list <- list()
-  res <- fromJSON(searchURL)
-  resdf <- res[['_embedded']][['stash:datasets']]
+  res <- fromJSON(searchURL) # get list of search results
+  resdf <- res[['_embedded']][['stash:datasets']] # pull metadata table out of json
   
+  # Create empty dataframe if there are no results:
   if(length(resdf) == 0){
     warning('No results')
     nores <- data.frame(matrix(ncol = length(cols), nrow = 0))
     colnames(nores) <- cols 
     return(nores)
   }
-  resdfs <- resdf[,cols]
-  result_list[[1]] <- resdfs
+  resdfs <- resdf[,cols] # pull desired metadata columns out
+  result_list[[1]] <- resdfs # add page 1 results to list
   
+  # Pull results from remaining pages:
   if(nrow(resdf) == 100 & endpage >1){
     for(j in seq((startpage+1):endpage)){
       p <- c((startpage+1):endpage)[j]
       
-      if(is.na(p)) break
+      if(is.na(p)) break 
       
-      searchURL <- paste0("https://datadryad.org/api/v2/search?page=", p, "&per_page=100&q=", spacereplace)
+      searchURL <- paste0(url_begin, p, url_resultsperpage, spacereplace)
       resl <- fromJSON(searchURL)
       resdfl <- resl[['_embedded']][['stash:datasets']]
       
       if(length(resdfl) == 0) {
-        break
+        break # stop if there are no more results
       }
       resdfsl <- resdfl[,cols]
       result_list[[j+1]] <- resdfsl
       
       if(p == endpage){
         if(nrow(resdfl)==100){
-          warning('There might be more results! Try increasing end page')
+          warning(more_results_warning) # warning if there are 100 results on the last page (endpage); maybe more
         }
       }
     }
@@ -69,9 +78,9 @@ dryadkeywordsearch <- function(query, startpage=1, endpage=1,
     return(moreresults)
   } else{
     if(is.data.frame(result_list[[1]])){
-      if(nrow(result_list[[1]]) == 100) warning('There might be more results! Try increasing end page')  
+      if(nrow(result_list[[1]]) == 100) warning(more_results_warning)  
     } else if(is.character(result_list[[1]])){
-      if(length(result_list[[1]]) == 100) warning('There might be more results! Try increasing end page')  
+      if(length(result_list[[1]]) == 100) warning(more_results_warning)  
     }
     return(result_list[[1]])}
 }
