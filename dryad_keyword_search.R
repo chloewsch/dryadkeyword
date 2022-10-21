@@ -85,6 +85,25 @@ dryadkeywordsearch <- function(query, startpage=1, endpage=1,
     return(result_list[[1]])}
 }
 
+## Batch search:
+# Dryad API allows 30 queries per minute
+
+batch_search_dryad <- function(query_list, end_page = 10, columns = c("identifier", "title")){
+  search_results_loop <- list()
+  for(i in 1:length(query_list)){
+    res <- dryadkeywordsearch(query = query_list[i], startpage = 1, endpage = end_page, 
+                              cols = columns)
+    if(nrow(res)>0) {
+      res$search_term <- query_list[i]
+      res <- res[, c('search_term', 'title', 'identifier')]
+    }
+    search_results_loop[[i]] <- res  
+    Sys.sleep(2.0) # 30 queries allowed per minute
+  }
+  search_res_df <- do.call('rbind', search_results_loop)
+  return(search_res_df)
+}
+
 #### Examples ####
 # single term:
 res <- dryadkeywordsearch("moose")
@@ -94,9 +113,12 @@ res <- dryadkeywordsearch("moos*")
 # multiple terms:
 res <- dryadkeywordsearch("moose tree")
 
+# Extract DOIs only:
+dois <- dryadkeywordsearch("moose", startpage = 1, endpage = 10, cols = "identifier")
+
 # list of terms:
 query_list <- as.list(c("moose", "moose tree"))
 res_list <- lapply(query_list, function(x) dryadkeywordsearch(query = x, startpage = 1, endpage = 10))
 
-# Extract DOIs only:
-dois <- dryadkeywordsearch("moose", startpage = 1, endpage = 10, cols = "identifier")
+# Or, batch search:
+res <- batch_search_dryad(query_list)
