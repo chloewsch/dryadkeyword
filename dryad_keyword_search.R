@@ -88,16 +88,23 @@ dryadkeywordsearch <- function(query, startpage=1, endpage=1,
 ## Batch search:
 # Dryad API allows 30 queries per minute
 
-batch_search_dryad <- function(query_list, end_page = 10, columns = c("identifier", "title")){
+batch_search_dryad <- function(query_list, end_page = 10, columns = c("identifier", "title"), search_status = FALSE){
   search_results_loop <- list()
   for(i in 1:length(query_list)){
     res <- dryadkeywordsearch(query = query_list[i], startpage = 1, endpage = end_page, 
                               cols = columns)
+    if(is.data.frame(res) == FALSE){
+      res <- as.data.frame(res)
+      names(res) <- columns
+    }
     if(nrow(res)>0) {
       res$search_term <- query_list[i]
-      res <- res[, c('search_term', 'title', 'identifier')]
+      res <- res[, c('search_term', columns)]
     }
-    search_results_loop[[i]] <- res  
+    
+    
+    search_results_loop[[i]] <- res
+    if(search_status == TRUE) print(paste0('Search completed query ', i))
     Sys.sleep(2.0) # 30 queries allowed per minute
   }
   search_res_df <- do.call('rbind', search_results_loop)
