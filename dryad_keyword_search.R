@@ -48,6 +48,16 @@ dryadkeywordsearch <- function(query, startpage=1, endpage=1,
     colnames(nores) <- cols 
     return(nores)
   }
+  
+  
+  missing_cols <- setdiff(cols, colnames(resdf)) # Check for missing columns
+  
+  # If any columns are missing, add them with NA values
+  
+  for (col in missing_cols) {
+    resdf[[col]] <- NA
+  }
+  
   resdfs <- resdf[,cols] # pull desired metadata columns out
   result_list[[1]] <- resdfs # add page 1 results to list
   
@@ -64,6 +74,13 @@ dryadkeywordsearch <- function(query, startpage=1, endpage=1,
       
       if(length(resdfl) == 0) {
         break # stop if there are no more results
+      }
+      
+      missing_cols <- setdiff(cols, colnames(resdfl)) # Check for missing columns
+      
+      # If any columns are missing, add them with NA values
+      for (col in missing_cols) {
+        resdfl[[col]] <- NA
       }
       resdfsl <- resdfl[,cols]
       result_list[[j+1]] <- resdfsl
